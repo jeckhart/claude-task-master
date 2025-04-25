@@ -4,7 +4,16 @@ Task Master can be configured through environment variables in a `.env` file at 
 
 ## Required Configuration
 
+Choose one of the following authentication methods:
+
+### Direct Anthropic API (Default)
 - `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude (Example: `ANTHROPIC_API_KEY=sk-ant-api03-...`)
+
+### AWS Bedrock
+- `ANTHROPIC_API_PROVIDER`: Set to 'bedrock' to use AWS Bedrock (Example: `ANTHROPIC_API_PROVIDER=bedrock`)
+- `AWS_ACCESS_KEY_ID`: Your AWS access key ID
+- `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key
+- `AWS_REGION`: AWS region where Bedrock is available (Example: `AWS_REGION=us-east-1`)
 
 ## Optional Configuration
 
@@ -23,13 +32,14 @@ Task Master can be configured through environment variables in a `.env` file at 
 ## Example .env File
 
 ```
-# Required
+# Authentication Method 1: Direct Anthropic API
 ANTHROPIC_API_KEY=sk-ant-api03-your-api-key
 
-# Optional - Claude Configuration
-MODEL=claude-3-7-sonnet-20250219
-MAX_TOKENS=4000
-TEMPERATURE=0.7
+# Authentication Method 2: AWS Bedrock
+ANTHROPIC_API_PROVIDER=bedrock
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_REGION=us-east-1
 
 # Optional - Perplexity API for Research
 PERPLEXITY_API_KEY=pplx-your-api-key
@@ -40,6 +50,9 @@ PROJECT_NAME=My Project
 PROJECT_VERSION=1.0.0
 
 # Optional - Application Configuration
+MODEL=claude-3-7-sonnet-20250219
+MAX_TOKENS=4000
+TEMPERATURE=0.7
 DEFAULT_SUBTASKS=3
 DEFAULT_PRIORITY=medium
 DEBUG=false
@@ -63,3 +76,9 @@ git clone https://github.com/eyaltoledano/claude-task-master.git
 cd claude-task-master
 node scripts/init.js
 ```
+
+### Common AWS Bedrock Issues:
+
+1. **Region Not Available**: Ensure you're using a region where Anthropic models are available in AWS Bedrock.
+2. **Invalid Credentials**: Double-check your AWS credentials and ensure the IAM user/role has appropriate Bedrock permissions.
+3. **Model Access**: Verify that you have enabled access to Anthropic models in your AWS Bedrock console.

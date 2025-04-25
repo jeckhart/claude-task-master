@@ -6,6 +6,7 @@
 // NOTE/TODO: Include the beta header output-128k-2025-02-19 in your API request to increase the maximum output token length to 128k tokens for Claude 3.7 Sonnet.
 
 import { Anthropic } from '@anthropic-ai/sdk';
+import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { CONFIG, log, sanitizePrompt, isSilentMode } from './utils.js';
@@ -15,14 +16,25 @@ import chalk from 'chalk';
 // Load environment variables
 dotenv.config();
 
-// Configure Anthropic client
-const anthropic = new Anthropic({
-	apiKey: process.env.ANTHROPIC_API_KEY,
-	// Add beta header for 128k token output
-	defaultHeaders: {
-		'anthropic-beta': 'output-128k-2025-02-19'
-	}
-});
+// Configure Anthropic client based on provider
+let anthropic;
+if (CONFIG.anthropicProvider === 'bedrock') {
+	anthropic = new AnthropicBedrock({
+		awsAccessKeyId: CONFIG.awsAccessKeyId,
+		awsSecretAccessKey: CONFIG.awsSecretAccessKey,
+		awsRegion: CONFIG.awsRegion
+	});
+	log('info', 'Initialized Anthropic client using AWS Bedrock');
+} else {
+	anthropic = new Anthropic({
+		apiKey: process.env.ANTHROPIC_API_KEY,
+		// Add beta header for 128k token output
+		defaultHeaders: {
+			'anthropic-beta': 'output-128k-2025-02-19'
+		}
+	});
+	log('info', 'Initialized Anthropic client using direct API');
+}
 
 // Lazy-loaded Perplexity client
 let perplexity = null;
@@ -1279,7 +1291,7 @@ function _buildAddTaskPrompt(prompt, contextTasks, { newTaskId } = {}) {
 /**
  * Get an Anthropic client instance
  * @param {Object} [session] - Optional session object from MCP
- * @returns {Anthropic} Anthropic client instance
+ * @returns {Anthropic|AnthropicBedrock} Anthropic client instance
  */
 function getAnthropicClient(session) {
 	// If we already have a global client and no session, use the global
@@ -1287,23 +1299,39 @@ function getAnthropicClient(session) {
 		return anthropic;
 	}
 
-	// Initialize a new client with API key from session or environment
-	const apiKey =
-		session?.env?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+	// Determine provider from session or environment
+	const provider = session?.env?.ANTHROPIC_API_PROVIDER || CONFIG.anthropicProvider;
 
-	if (!apiKey) {
-		throw new Error(
-			'ANTHROPIC_API_KEY environment variable is missing. Set it to use AI features.'
-		);
-	}
+	if (provider === 'bedrock') {
+		const awsAccessKeyId = session?.env?.AWS_ACCESS_KEY_ID || CONFIG.awsAccessKeyId;
+		const awsSecretAccessKey = session?.env?.AWS_SECRET_ACCESS_KEY || CONFIG.awsSecretAccessKey;
+		const awsRegion = session?.env?.AWS_REGION || CONFIG.awsRegion;
 
-	return new Anthropic({
-		apiKey: apiKey,
-		// Add beta header for 128k token output
-		defaultHeaders: {
-			'anthropic-beta': 'output-128k-2025-02-19'
+		if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
+			throw new Error('AWS credentials and region are required when using Bedrock provider');
 		}
-	});
+
+		return new AnthropicBedrock({
+			awsAccessKeyId,
+			awsSecretAccessKey,
+			awsRegion
+		});
+	} else {
+		// Initialize a new client with API key from session or environment
+		const apiKey = session?.env?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+
+		if (!apiKey) {
+			throw new Error('ANTHROPIC_API_KEY environment variable is missing when using direct Anthropic API');
+		}
+
+		return new Anthropic({
+			apiKey: apiKey,
+			// Add beta header for 128k token output
+			defaultHeaders: {
+				'anthropic-beta': 'output-128k-2025-02-19'
+			}
+		});
+	}
 }
 
 /**
@@ -1455,29 +1483,42 @@ Return a JSON object with the following structure:
 /**
  * Get a configured Anthropic client for MCP
  * @param {Object} session - Session object from MCP
- * @param {Object} log - Logger object
- * @returns {Anthropic} - Configured Anthropic client
+ * @param {Object} customEnv - Custom environment variables
+ * @returns {Anthropic|AnthropicBedrock} - Configured Anthropic client
  */
 function getConfiguredAnthropicClient(session = null, customEnv = null) {
-	// If we have a session with ANTHROPIC_API_KEY in env, use that
-	const apiKey =
-		session?.env?.ANTHROPIC_API_KEY ||
-		process.env.ANTHROPIC_API_KEY ||
-		customEnv?.ANTHROPIC_API_KEY;
+	// Determine provider
+	const provider = session?.env?.ANTHROPIC_API_PROVIDER || customEnv?.ANTHROPIC_API_PROVIDER || CONFIG.anthropicProvider;
 
-	if (!apiKey) {
-		throw new Error(
-			'ANTHROPIC_API_KEY environment variable is missing. Set it to use AI features.'
-		);
-	}
+	if (provider === 'bedrock') {
+		const awsAccessKeyId = session?.env?.AWS_ACCESS_KEY_ID || customEnv?.AWS_ACCESS_KEY_ID || CONFIG.awsAccessKeyId;
+		const awsSecretAccessKey = session?.env?.AWS_SECRET_ACCESS_KEY || customEnv?.AWS_SECRET_ACCESS_KEY || CONFIG.awsSecretAccessKey;
+		const awsRegion = session?.env?.AWS_REGION || customEnv?.AWS_REGION || CONFIG.awsRegion;
 
-	return new Anthropic({
-		apiKey: apiKey,
-		// Add beta header for 128k token output
-		defaultHeaders: {
-			'anthropic-beta': 'output-128k-2025-02-19'
+		if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
+			throw new Error('AWS credentials and region are required when using Bedrock provider');
 		}
-	});
+
+		return new AnthropicBedrock({
+			awsAccessKeyId,
+			awsSecretAccessKey,
+			awsRegion
+		});
+	} else {
+		const apiKey = session?.env?.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || customEnv?.ANTHROPIC_API_KEY;
+
+		if (!apiKey) {
+			throw new Error('ANTHROPIC_API_KEY environment variable is missing when using direct Anthropic API');
+		}
+
+		return new Anthropic({
+			apiKey: apiKey,
+			// Add beta header for 128k token output
+			defaultHeaders: {
+				'anthropic-beta': 'output-128k-2025-02-19'
+			}
+		});
+	}
 }
 
 /**

@@ -20,7 +20,12 @@ const CONFIG = {
 	defaultSubtasks: parseInt(process.env.DEFAULT_SUBTASKS || '3'),
 	defaultPriority: process.env.DEFAULT_PRIORITY || 'medium',
 	projectName: process.env.PROJECT_NAME || 'Task Master',
-	projectVersion: '1.5.0' // Hardcoded version - ALWAYS use this value, ignore environment variable
+	projectVersion: '1.5.0', // Hardcoded version - ALWAYS use this value, ignore environment variable
+	// AWS Bedrock Configuration
+	anthropicProvider: process.env.ANTHROPIC_API_PROVIDER || 'anthropic',
+	awsRegion: process.env.AWS_REGION || 'us-east-1',
+	awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
+	awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 };
 
 // Set up logging based on log level

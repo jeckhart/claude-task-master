@@ -7,7 +7,9 @@ A task management system for AI-driven development with Claude, designed to work
 ## Requirements
 
 - Node.js 14.0.0 or higher
-- Anthropic API key (Claude API)
+- Either:
+  - Anthropic API key (Claude API), or
+  - AWS credentials with Bedrock access
 - Anthropic SDK version 0.39.0 or higher
 - OpenAI SDK (for Perplexity API integration, optional)
 
@@ -17,7 +19,16 @@ The script can be configured through environment variables in a `.env` file at t
 
 ### Required Configuration
 
+Choose one of the following authentication methods:
+
+#### Direct Anthropic API (Default)
 - `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
+
+#### AWS Bedrock
+- `ANTHROPIC_API_PROVIDER`: Set to 'bedrock' to use AWS Bedrock
+- `AWS_ACCESS_KEY_ID`: Your AWS access key ID
+- `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key
+- `AWS_REGION`: AWS region where Bedrock is available (e.g., us-east-1)
 
 ### Optional Configuration
 
